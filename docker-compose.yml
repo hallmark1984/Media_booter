@@ -3,70 +3,26 @@ networks:
     driver: bridge
 
 services:
-  gluetun:
-    image: qmcgaw/gluetun
-    container_name: gluetun
-    privileged: true
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
+  # SAMBA: Makes your 1TB HDD visible on your network
+  samba:
+    image: dperson/samba
+    container_name: samba
+    environment:
+      - TZ=${TZ}
+      - USER=pi;${DB_PASSWORD} # Uses your DB_PASSWORD from .env for login
+    volumes:
+      - ./data:/mnt/data
+    ports:
+      - "139:139"
+      - "445:445"
+    command: -s "HomeServer;/mnt/data;yes;no;no;pi;pi;pi" -u "pi;${DB_PASSWORD}"
+    restart: unless-stopped
     networks:
       - media-network
-    ports:
-      - 8080:8080        # qBittorrent Web UI
-      - 20207:20207      # BitTorrent TCP
-      - 20207:20207/udp  # BitTorrent UDP
-    environment:
-      - VPN_SERVICE_PROVIDER=surfshark
-      - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
-      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
-      - SERVER_CITIES=${SURFSHARK_CITY}
-      - DOT=off
-      - DNS_KEEP_NAMESERVER=on
-      - DNS_ADDRESS=1.1.1.1
-    restart: always
-
-  qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
-    container_name: qbittorrent
-    network_mode: "container:gluetun"
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-      - WEBUI_PORT=8080
-    volumes:
-      - ./config/qbittorrent:/config
-      - ./data/torrents:/downloads    # <--- Now on your 1TB HDD
-    restart: unless-stopped
-    depends_on:
-      gluetun:
-        condition: service_healthy
-
-  sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
-    container_name: sonarr
-    networks:
-      - media-network
-    ports:
-      - 8989:8989
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ./config/sonarr:/config
-      - ./data/media/tv:/tv          # <--- Now on your 1TB HDD
-      - ./data/torrents:/downloads     # <--- Now on your 1TB HDD
-    restart: unless-stopped
 
   audiobookshelf:
     image: ghcr.io/advplyr/audiobookshelf:latest
     container_name: audiobookshelf
-    networks:
-      - media-network
     ports:
       - 1337:80
     environment:
@@ -74,19 +30,34 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ./data/media/audiobooks:/audiobooks # <--- Now on your 1TB HDD
-      - ./data/media/podcasts:/podcasts     # <--- Now on your 1TB HDD
+      - ./data/media/audiobooks:/audiobooks
+      - ./data/media/podcasts:/podcasts
       - ./config/audiobookshelf:/config
       - ./config/audiobookshelf/metadata:/metadata
     restart: unless-stopped
     depends_on:
       - postgres
+    networks:
+      - media-network
+
+  kavita:
+    image: jvmilazz0/kavita:latest
+    container_name: kavita
+    volumes:
+      - ./data/media/books:/books
+      - ./data/media/comics:/comics
+      - ./config/kavita:/kavita/config
+    environment:
+      - TZ=${TZ}
+    ports:
+      - 5000:5000
+    restart: unless-stopped
+    networks:
+      - media-network
 
   postgres:
     image: postgres:15-alpine
     container_name: postgres
-    networks:
-      - media-network
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -94,3 +65,5 @@ services:
     volumes:
       - ./config/postgres:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - media-network
