@@ -1,60 +1,80 @@
 services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 8080:8080        # qBittorrent Web UI
+      - 20207:20207      # qBittorrent Incoming (TCP)
+      - 20207:20207/udp  # qBittorrent Incoming (UDP)
+    environment:
+      - VPN_SERVICE_PROVIDER=surfshark
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - SERVER_CITIES=${SURFSHARK_CITY}
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    # IMPORTANT: qBittorrent uses Gluetun's network
+    network_mode: "container:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config/qbittorrent:/config
+      - ./data/torrents:/downloads
+    restart: unless-stopped
+    depends_on:
+      - gluetun
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    ports:
+      - 8989:8989
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/sonarr:/config
+      - ./data/media/tv:/tv
+      - ./data/torrents:/downloads
+    restart: unless-stopped
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    ports:
+      - 1337:80
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./data/media/audiobooks:/audiobooks
+      - ./data/media/podcasts:/podcasts
+      - ./config/audiobookshelf:/config
+      - ./config/audiobookshelf/metadata:/metadata
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
   postgres:
-      image: postgres:15-alpine
-          container_name: postgres
-              environment:
-                    POSTGRES_USER: ${DB_USER}
-                          POSTGRES_PASSWORD: ${DB_PASSWORD}
-                                POSTGRES_DB: audiobookshelf
-                                    volumes:
-                                          - ./config/postgres:/var/lib/postgresql/data
-                                              restart: unless-stopped
-
-                                                audiobookshelf:
-                                                    image: ghcr.io/advplyr/audiobookshelf:latest
-                                                        container_name: audiobookshelf
-                                                            ports:
-                                                                  - 1337:80
-                                                                      environment:
-                                                                            - PUID=${PUID}
-                                                                                  - PGID=${PGID}
-                                                                                        - TZ=${TZ}
-                                                                                            volumes:
-                                                                                                  - ./data/media/audiobooks:/audiobooks
-                                                                                                        - ./data/media/podcasts:/podcasts
-                                                                                                              - ./config/audiobookshelf:/config
-                                                                                                                    - ./config/audiobookshelf/metadata:/metadata
-                                                                                                                        restart: unless-stopped
-
-                                                                                                                          sonarr:
-                                                                                                                              image: lscr.io/linuxserver/sonarr:latest
-                                                                                                                                  container_name: sonarr
-                                                                                                                                      environment:
-                                                                                                                                            - PUID=${PUID}
-                                                                                                                                                  - PGID=${PGID}
-                                                                                                                                                        - TZ=${TZ}
-                                                                                                                                                            ports:
-                                                                                                                                                                  - 8989:8989
-                                                                                                                                                                      volumes:
-                                                                                                                                                                            - ./config/sonarr:/config
-                                                                                                                                                                                  - ./data/media/tv:/tv
-                                                                                                                                                                                        - ./data/torrents:/downloads
-                                                                                                                                                                                            restart: unless-stopped
-
-                                                                                                                                                                                              qbittorrent:
-                                                                                                                                                                                                  image: lscr.io/linuxserver/qbittorrent:latest
-                                                                                                                                                                                                      container_name: qbittorrent
-                                                                                                                                                                                                          environment:
-                                                                                                                                                                                                                - PUID=${PUID}
-                                                                                                                                                                                                                      - PGID=${PGID}
-                                                                                                                                                                                                                            - TZ=${TZ}
-                                                                                                                                                                                                                                  - WEBUI_PORT=8080
-                                                                                                                                                                                                                                      ports:
-                                                                                                                                                                                                                                            - 8080:8080        # Web UI
-                                                                                                                                                                                                                                                  - 20207:20207      # Incoming BitTorrent (TCP)
-                                                                                                                                                                                                                                                        - 20207:20207/udp  # Incoming BitTorrent (UDP)
-                                                                                                                                                                                                                                                            volumes:
-                                                                                                                                                                                                                                                                  - ./config/qbittorrent:/config
-                                                                                                                                                                                                                                                                        - ./data/torrents:/downloads
-                                                                                                                                                                                                                                                                            restart: unless-stopped
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: audiobookshelf
+    volumes:
+      - ./config/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
                                                                                                                                                                                                                                                                             
