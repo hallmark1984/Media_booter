@@ -57,7 +57,7 @@ services:
     restart: unless-stopped
 
   audiobookshelf:
-    image: ghcr.io/advplyr/audiobookshelf:latest
+    image: image: ghcr.io/advplyr/audiobookshelf:2.7.2
     container_name: audiobookshelf
     networks:
       - media-network
