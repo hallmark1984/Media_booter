@@ -3,13 +3,24 @@ networks:
     driver: bridge
 
 services:
-  # SAMBA: Makes your 1TB HDD visible on your network
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    ports:
+      - 3000:3000
+    volumes:
+      - ./config/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    networks:
+      - media-network
+
   samba:
     image: dperson/samba
     container_name: samba
     environment:
       - TZ=${TZ}
-      - USER=pi;${DB_PASSWORD} # Uses your DB_PASSWORD from .env for login
+      - USER=pi;${DB_PASSWORD}
     volumes:
       - ./data:/mnt/data
     ports:
@@ -64,18 +75,6 @@ services:
       POSTGRES_DB: audiobookshelf
     volumes:
       - ./config/postgres:/var/lib/postgresql/data
-    restart: unless-stopped
-    networks:
-      - media-network
-
-homepage:
-    image: ghcr.io/gethomepage/homepage:latest
-    container_name: homepage
-    ports:
-      - 3000:3000
-    volumes:
-      - ./config/homepage:/app/config # Where your settings live
-      - /var/run/docker.sock:/var/run/docker.sock:ro # Optional: lets dashboard show if containers are running
     restart: unless-stopped
     networks:
       - media-network
