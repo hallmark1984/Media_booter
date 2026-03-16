@@ -1,20 +1,30 @@
+networks:
+  media-network:
+    driver: bridge
+
 services:
   gluetun:
     image: qmcgaw/gluetun
     container_name: gluetun
+    # Privileged is often required on Pi to allow WireGuard to modify network interfaces
+    privileged: true
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    networks:
+      - media-network
     ports:
-      - 8080:8080        # qBittorrent Web UI
-      - 20207:20207      # BitTorrent TCP
-      - 20207:20207/udp  # BitTorrent UDP
+      - 8080:8080        # qBittorrent Web UI (Mapped through VPN)
+      - 20207:20207      # qBittorrent Incoming TCP
+      - 20207:20207/udp  # qBittorrent Incoming UDP
     environment:
       - VPN_SERVICE_PROVIDER=surfshark
       - VPN_TYPE=wireguard
       - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
       - SERVER_CITIES=${SURFSHARK_CITY}
+      # DNS fixes for Raspberry Pi stability
       - DOT=off
       - DNS_KEEP_NAMESERVER=on
       - DNS_ADDRESS=1.1.1.1
@@ -23,6 +33,7 @@ services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
+    # Join the VPN container's network stack
     network_mode: "container:gluetun"
     environment:
       - PUID=${PUID}
@@ -34,11 +45,14 @@ services:
       - ./data/torrents:/downloads
     restart: unless-stopped
     depends_on:
-      - gluetun
+      gluetun:
+        condition: service_healthy
 
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
+    networks:
+      - media-network
     ports:
       - 8989:8989
     environment:
@@ -54,6 +68,8 @@ services:
   audiobookshelf:
     image: ghcr.io/advplyr/audiobookshelf:latest
     container_name: audiobookshelf
+    networks:
+      - media-network
     ports:
       - 1337:80
     environment:
@@ -72,6 +88,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: postgres
+    networks:
+      - media-network
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
