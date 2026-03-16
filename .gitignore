@@ -1,0 +1,7 @@
+# Ignore local secrets
+.env
+
+# Ignore application data and logs
+data/
+config/
+*.log
