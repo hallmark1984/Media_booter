@@ -1,3 +1,7 @@
+networks:
+  media-network:
+    driver: bridge
+
 services:
   gluetun:
     image: qmcgaw/gluetun
@@ -6,10 +10,12 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    networks:
+      - media-network
     ports:
       - 8080:8080        # qBittorrent Web UI
-      - 20207:20207      # qBittorrent Incoming (TCP)
-      - 20207:20207/udp  # qBittorrent Incoming (UDP)
+      - 20207:20207      # BitTorrent TCP
+      - 20207:20207/udp  # BitTorrent UDP
     environment:
       - VPN_SERVICE_PROVIDER=surfshark
       - VPN_TYPE=wireguard
@@ -20,8 +26,7 @@ services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
-    # IMPORTANT: qBittorrent uses Gluetun's network
-    network_mode: "container:gluetun"
+    network_mode: "container:gluetun" # Joins VPN network
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -37,6 +42,8 @@ services:
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
+    networks:
+      - media-network
     ports:
       - 8989:8989
     environment:
@@ -52,6 +59,8 @@ services:
   audiobookshelf:
     image: ghcr.io/advplyr/audiobookshelf:latest
     container_name: audiobookshelf
+    networks:
+      - media-network
     ports:
       - 1337:80
     environment:
@@ -64,12 +73,12 @@ services:
       - ./config/audiobookshelf:/config
       - ./config/audiobookshelf/metadata:/metadata
     restart: unless-stopped
-    depends_on:
-      - postgres
 
   postgres:
     image: postgres:15-alpine
     container_name: postgres
+    networks:
+      - media-network
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -77,4 +86,3 @@ services:
     volumes:
       - ./config/postgres:/var/lib/postgresql/data
     restart: unless-stopped
-                                                                                                                                                                                                                                                                            
