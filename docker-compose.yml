@@ -6,7 +6,6 @@ services:
   gluetun:
     image: qmcgaw/gluetun
     container_name: gluetun
-    # Privileged is often required on Pi to allow WireGuard to modify network interfaces
     privileged: true
     cap_add:
       - NET_ADMIN
@@ -15,25 +14,23 @@ services:
     networks:
       - media-network
     ports:
-      - 8080:8080        # qBittorrent Web UI (Mapped through VPN)
-      - 20207:20207      # qBittorrent Incoming TCP
-      - 20207:20207/udp  # qBittorrent Incoming UDP
+      - 8080:8080        # qBittorrent Web UI
+      - 20207:20207      # BitTorrent TCP
+      - 20207:20207/udp  # BitTorrent UDP
     environment:
       - VPN_SERVICE_PROVIDER=surfshark
       - VPN_TYPE=wireguard
       - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
       - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
       - SERVER_CITIES=${SURFSHARK_CITY}
-      # DNS fixes for Raspberry Pi stability
       - DOT=off
       - DNS_KEEP_NAMESERVER=on
       - DNS_ADDRESS=1.1.1.1
-    restart: unless-stopped
+    restart: always
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
-    # Join the VPN container's network stack
     network_mode: "container:gluetun"
     environment:
       - PUID=${PUID}
@@ -42,7 +39,7 @@ services:
       - WEBUI_PORT=8080
     volumes:
       - ./config/qbittorrent:/config
-      - ./data/torrents:/downloads
+      - ./data/torrents:/downloads    # <--- Now on your 1TB HDD
     restart: unless-stopped
     depends_on:
       gluetun:
@@ -61,8 +58,8 @@ services:
       - TZ=${TZ}
     volumes:
       - ./config/sonarr:/config
-      - ./data/media/tv:/tv
-      - ./data/torrents:/downloads
+      - ./data/media/tv:/tv          # <--- Now on your 1TB HDD
+      - ./data/torrents:/downloads     # <--- Now on your 1TB HDD
     restart: unless-stopped
 
   audiobookshelf:
@@ -77,8 +74,8 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ./data/media/audiobooks:/audiobooks
-      - ./data/media/podcasts:/podcasts
+      - ./data/media/audiobooks:/audiobooks # <--- Now on your 1TB HDD
+      - ./data/media/podcasts:/podcasts     # <--- Now on your 1TB HDD
       - ./config/audiobookshelf:/config
       - ./config/audiobookshelf/metadata:/metadata
     restart: unless-stopped
