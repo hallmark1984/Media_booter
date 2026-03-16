@@ -1,14 +1,16 @@
 #!/bin/bash
-cd /home/pi/media-stack
+# Move to the directory where the repo is cloned
+cd "$(dirname "$0")"
 
-# Check for updates from Git
+# Update from Git
 git pull origin main
 
-# Create folders if they don't exist
-mkdir -p data/media/tv data/media/audiobooks data/torrents config
+# Force create necessary folders if they got deleted
+mkdir -p data/media/tv data/media/audiobooks data/media/podcasts data/torrents config/sonarr config/qbittorrent config/audiobookshelf config/postgres
 
-# Ensure the 'pi' user (1000) owns the data
-sudo chown -R 1000:1000 ./data ./config
+# IMPORTANT: Fix permissions for the 'pi' user so Docker doesn't fail
+sudo chown -R $USER:$USER .
+sudo chmod -R 775 .
 
-# Start the containers
+# Fire up the containers
 docker compose up -d --remove-orphans
