@@ -22,11 +22,11 @@ services:
       - TZ=${TZ}
       - USER=pi;${DB_PASSWORD}
     volumes:
-      - ./data:/mnt/data
+      - ./data:/home/pi/media-stack/data
     ports:
       - "139:139"
       - "445:445"
-    command: -s "HomeServer;/mnt/data;yes;no;no;pi;pi;pi" -u "pi;${DB_PASSWORD}"
+    command: -s "HomeServer;/home/pi/media-stack/data;yes;no;no;pi;pi;pi" -u "pi;${DB_PASSWORD}"
     restart: unless-stopped
     networks:
       - media-network
