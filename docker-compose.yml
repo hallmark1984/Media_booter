@@ -54,14 +54,16 @@ services:
       - media-network
 
   kavita:
-    image: jvmilazz0/kavita:latest
+    image: lscr.io/linuxserver/kavita:latest
     container_name: kavita
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
     volumes:
+      - ./config/kavita:/config        # Note: linuxserver uses /config, not /kavita/config
       - ./data/media/books:/books
       - ./data/media/comics:/comics
-      - ./config/kavita:/kavita/config
-    environment:
-      - TZ=${TZ}
     ports:
       - 5000:5000
     restart: unless-stopped
