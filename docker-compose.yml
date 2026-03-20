@@ -189,7 +189,7 @@ services:
   django:
     build: ./django-app
     container_name: django
-    command: gunicorn myproject.wsgi:application --bind 0.0.0.0:8000
+    command: gunicorn webapp.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - ./django-app:/app
     ports:
