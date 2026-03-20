@@ -1,3 +1,7 @@
+x-dns: &default-dns
+  dns:
+    - 172.18.0.11
+
 networks:
   media-network:
     driver: bridge
@@ -17,6 +21,8 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+    <<: *default-dns
+
 
   samba:
     image: dperson/samba
@@ -33,6 +39,7 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+    <<: *default-dns
 
   audiobookshelf:
     image: ghcr.io/advplyr/audiobookshelf:latest
@@ -53,6 +60,7 @@ services:
       - postgres
     networks:
       - media-network
+    <<: *default-dns
 
   kavita:
     image: lscr.io/linuxserver/kavita:latest
@@ -70,6 +78,7 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+    <<: *default-dns
 
   postgres:
     image: postgres:15-alpine
@@ -84,6 +93,7 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+    <<: *default-dns
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -103,6 +113,7 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+    <<: *default-dns
 
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
@@ -121,6 +132,7 @@ services:
       - qbittorrent
     networks:
       - media-network
+    <<: *default-dns
 
   radarr:
     image: lscr.io/linuxserver/radarr:latest
@@ -139,6 +151,7 @@ services:
       - qbittorrent
     networks:
       - media-network
+    <<: *default-dns
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -154,6 +167,7 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+    <<: *default-dns
 
   pihole:
     image: pihole/pihole:latest
