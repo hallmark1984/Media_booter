@@ -185,3 +185,23 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+
+  django:
+    build: ./django-app
+    container_name: django
+    command: gunicorn myproject.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - ./django-app:/app
+    ports:
+      - 8000:8000
+    environment:
+      - DEBUG=0
+      - DB_NAME=audiobookshelf
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+    depends_on:
+      - postgres
+    networks:
+      - media-network
