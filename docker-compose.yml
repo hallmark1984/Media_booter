@@ -1,19 +1,46 @@
-x-dns: &default-dns
-  dns:
-    - pihole
+version: "3.9"
 
 networks:
   media-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+
+x-dns: &default-dns
+  dns:
+    - 172.18.0.10   # Pi-hole static IP
 
 services:
+
+  # -------------------- PIHOLE --------------------
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    environment:
+      TZ: ${TZ}
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+    volumes:
+      - ./config/pihole/etc-pihole:/etc/pihole
+      - ./config/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8081:80"
+    restart: unless-stopped
+    networks:
+      media-network:
+        ipv4_address: 172.18.0.10
+
+
+  # -------------------- HOMEPAGE --------------------
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     environment:
       HOMEPAGE_ALLOWED_HOSTS: 192.168.4.182:3000,192.168.4.182:5000
     ports:
-      - 3000:3000
+      - "3000:3000"
     volumes:
       - ./config/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -24,6 +51,7 @@ services:
     <<: *default-dns
 
 
+  # -------------------- SAMBA --------------------
   samba:
     image: dperson/samba
     container_name: samba
@@ -35,17 +63,21 @@ services:
     ports:
       - "139:139"
       - "445:445"
-    command: -s "HomeServer;/home/pi/media-stack/data;yes;no;no;pi;pi;pi" -u "pi;${DB_PASSWORD}"
+    command: >
+      -s "HomeServer;/home/pi/media-stack/data;yes;no;no;pi;pi;pi"
+      -u "pi;${DB_PASSWORD}"
     restart: unless-stopped
     networks:
       - media-network
     <<: *default-dns
 
+
+  # -------------------- AUDIOBOOKSHELF --------------------
   audiobookshelf:
     image: ghcr.io/advplyr/audiobookshelf:latest
     container_name: audiobookshelf
     ports:
-      - 1337:80
+      - "1337:80"
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -62,6 +94,8 @@ services:
       - media-network
     <<: *default-dns
 
+
+  # -------------------- KAVITA --------------------
   kavita:
     image: lscr.io/linuxserver/kavita:latest
     container_name: kavita
@@ -70,16 +104,18 @@ services:
       - PGID=1000
       - TZ=${TZ}
     volumes:
-      - ./config/kavita:/config        # Note: linuxserver uses /config, not /kavita/config
+      - ./config/kavita:/config
       - ./data/media/books:/books
       - ./data/media/comics:/comics
     ports:
-      - 5000:5000
+      - "5000:5000"
     restart: unless-stopped
     networks:
       - media-network
     <<: *default-dns
 
+
+  # -------------------- POSTGRES --------------------
   postgres:
     image: postgres:15-alpine
     container_name: postgres
@@ -95,6 +131,8 @@ services:
       - media-network
     <<: *default-dns
 
+
+  # -------------------- QBITTORRENT --------------------
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
@@ -107,14 +145,16 @@ services:
       - ./config/qbittorrent:/config
       - ./data/downloads:/downloads
     ports:
-      - 8080:8080
-      - 6881:6881
-      - 6881:6881/udp
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
     restart: unless-stopped
     networks:
       - media-network
     <<: *default-dns
 
+
+  # -------------------- SONARR --------------------
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
@@ -126,7 +166,7 @@ services:
       - ./config/sonarr:/config
       - ./data:/data
     ports:
-      - 8989:8989
+      - "8989:8989"
     restart: unless-stopped
     depends_on:
       - qbittorrent
@@ -134,6 +174,8 @@ services:
       - media-network
     <<: *default-dns
 
+
+  # -------------------- RADARR --------------------
   radarr:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
@@ -145,7 +187,7 @@ services:
       - ./config/radarr:/config
       - ./data:/data
     ports:
-      - 7878:7878
+      - "7878:7878"
     restart: unless-stopped
     depends_on:
       - qbittorrent
@@ -153,6 +195,8 @@ services:
       - media-network
     <<: *default-dns
 
+
+  # -------------------- PROWLARR --------------------
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
@@ -163,7 +207,7 @@ services:
     volumes:
       - ./config/prowlarr:/config
     ports:
-      - 9696:9696
+      - "9696:9696"
     restart: unless-stopped
     networks:
       - media-network
@@ -172,23 +216,52 @@ services:
         soft: 65535
         hard: 65535
     <<: *default-dns
-  pihole:
-    image: pihole/pihole:latest
-    container_name: pihole
+
+
+  # -------------------- READARR (ARM FIXED) --------------------
+  readarr:
+    image: ghcr.io/hotio/readarr:latest
+    container_name: readarr
     environment:
-      TZ: ${TZ}
-      WEBPASSWORD: ${PIHOLE_PASSWORD}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
-      - ./config/pihole/etc-pihole:/etc/pihole
-      - ./config/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
+      - ./config/readarr:/config
+      - ./data:/data
     ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "8081:80"
+      - "8787:8787"
     restart: unless-stopped
+    depends_on:
+      - qbittorrent
     networks:
       - media-network
+    <<: *default-dns
 
+
+  # -------------------- BAZARR --------------------
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./config/bazarr:/config
+      - ./data:/data
+    ports:
+      - "6767:6767"
+    restart: unless-stopped
+    depends_on:
+      - sonarr
+      - radarr
+    networks:
+      - media-network
+    <<: *default-dns
+
+
+  # -------------------- DJANGO APP --------------------
   django:
     build: ./django-app
     container_name: django
@@ -196,7 +269,7 @@ services:
     volumes:
       - ./django-app:/app
     ports:
-      - 8000:8000
+      - "8000:8000"
     environment:
       - DEBUG=0
       - DB_NAME=audiobookshelf
@@ -208,3 +281,4 @@ services:
       - postgres
     networks:
       - media-network
+    <<: *default-dns
