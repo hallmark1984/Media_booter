@@ -218,47 +218,6 @@ services:
     <<: *default-dns
 
 
-  # -------------------- READARR (ARM FIXED) --------------------
-  readarr:
-    image: ghcr.io/hotio/readarr:latest
-    container_name: readarr
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ./config/readarr:/config
-      - ./data:/data
-    ports:
-      - "8787:8787"
-    restart: unless-stopped
-    depends_on:
-      - qbittorrent
-    networks:
-      - media-network
-    <<: *default-dns
-
-
-  # -------------------- BAZARR --------------------
-  bazarr:
-    image: lscr.io/linuxserver/bazarr:latest
-    container_name: bazarr
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ./config/bazarr:/config
-      - ./data:/data
-    ports:
-      - "6767:6767"
-    restart: unless-stopped
-    depends_on:
-      - sonarr
-      - radarr
-    networks:
-      - media-network
-    <<: *default-dns
 
 
   # -------------------- DJANGO APP --------------------
