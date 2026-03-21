@@ -167,8 +167,11 @@ services:
     restart: unless-stopped
     networks:
       - media-network
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     <<: *default-dns
-
   pihole:
     image: pihole/pihole:latest
     container_name: pihole
