@@ -95,26 +95,6 @@ services:
     <<: *default-dns
 
 
-  # -------------------- KAVITA --------------------
-  kavita:
-    image: lscr.io/linuxserver/kavita:latest
-    container_name: kavita
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=${TZ}
-    volumes:
-      - ./config/kavita:/config
-      - ./data/media/books:/books
-      - ./data/media/comics:/comics
-    ports:
-      - "5000:5000"
-    restart: unless-stopped
-    networks:
-      - media-network
-    <<: *default-dns
-
-
   # -------------------- POSTGRES --------------------
   postgres:
     image: postgres:15-alpine
@@ -173,28 +153,6 @@ services:
     networks:
       - media-network
     <<: *default-dns
-
-
-  # -------------------- RADARR --------------------
-  radarr:
-    image: lscr.io/linuxserver/radarr:latest
-    container_name: radarr
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ./config/radarr:/config
-      - ./data:/data
-    ports:
-      - "7878:7878"
-    restart: unless-stopped
-    depends_on:
-      - qbittorrent
-    networks:
-      - media-network
-    <<: *default-dns
-
 
   # -------------------- PROWLARR --------------------
   prowlarr:
